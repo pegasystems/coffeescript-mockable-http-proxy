@@ -13,33 +13,34 @@
 DEFAULT_TIMEOUT = 60
 TICK = 100
 
-restService = require 'rest-middleware/server'
-uuid = require 'uuid'
-arraySort = require 'array-sort'
-httpProxy = require 'http-proxy'
+restService = require "rest-middleware/server"
+uuid = require "uuid"
+arraySort = require "array-sort"
+httpProxy = require "http-proxy"
 
 clone = (obj) ->
   return JSON.parse(JSON.stringify(obj))
 
 class MockableHttpServer
-    constructor: () ->
+    constructor: (printCallback=console.log) ->
         @proxy = httpProxy.createProxyServer {}
         @routes = {}
         @loggedRequests = {}
         @internalDataForRoutes = {}
         @sortedRoutes = []
         @areSortedRoutesValid = false
+        @printCallback = printCallback
 
         uthis = this
         printRoutes = () ->
-          console.log ''
-          console.log "We have #{Object.keys(uthis.routes).length} routes:"
-    
+          uthis.printCallback ""
+          uthis.printCallback "We have #{Object.keys(uthis.routes).length} routes:"
+
           for key in Object.keys(uthis.routes)
-            console.log "### #{key}"
+            uthis.printCallback "### #{key}"
             uthis.printRoute uthis.routes[key]
 
-          console.log ''
+          uthis.printCallback ""
 
         setInterval printRoutes, 60000
 
@@ -65,56 +66,56 @@ class MockableHttpServer
 
     validateRoute: (data) ->
       if !data?
-        throw new restService.ServerMethodError 400, 'POST', [],
-          'Invalid route data: empty'
+        throw new restService.ServerMethodError 400, "POST", [],
+          "Invalid route data: empty"
 
       if !data.path? || !data.priority?
-        throw new restService.ServerMethodError 400, 'POST', [],
-          'Invalid route data: no path or priority'
+        throw new restService.ServerMethodError 400, "POST", [],
+          "Invalid route data: no path or priority"
 
       if data.times?
         times = parseInt(data.times)
         if isNaN(times) or times <= 0
-          throw new restService.ServerMethodError 400, 'POST', [],
-            'Invalid route data: times must be a non-negative integer'
+          throw new restService.ServerMethodError 400, "POST", [],
+            "Invalid route data: times must be a non-negative integer"
 
-      if data.method? and data.method != 'POST' and data.method != 'GET'
-        throw new restService.ServerMethodError 400, 'POST', [],
-          'Invalid route data: method must be POST or GET'
+      if data.method? and data.method != "POST" and data.method != "GET"
+        throw new restService.ServerMethodError 400, "POST", [],
+          "Invalid route data: method must be POST or GET"
 
       if data.response? or data.log? or data.forward?
           if data.response?
             if !data.response.code? || !data.response.body?
-              throw new restService.ServerMethodError 400, 'POST', [],
-                'Invalid route data: response must have code and body'
+              throw new restService.ServerMethodError 400, "POST", [],
+                "Invalid route data: response must have code and body"
           if data.forward?
             if !data.forward.host? or !data.forward.port?
-              throw new restService.ServerMethodError 400, 'POST', [],
-                'Invalid route data: forward must have host and port'
+              throw new restService.ServerMethodError 400, "POST", [],
+                "Invalid route data: forward must have host and port"
       else
-        throw new restService.ServerMethodError 400, 'POST', [],
-          'Invalid route data: no action provided'
+        throw new restService.ServerMethodError 400, "POST", [],
+          "Invalid route data: no action provided"
 
     printRoute: (data) ->
-      console.log "  with priority: #{data.priority}"
-      console.log "  for URL: #{data.path}"
+      @printCallback "  with priority: #{data.priority}"
+      @printCallback "  for URL: #{data.path}"
 
       if data.method?
-        console.log "  for method: #{data.method}"
+        @printCallback "  for method: #{data.method}"
 
       if data.times?
-        console.log "  will expire after #{data.times} calls"
+        @printCallback "  will expire after #{data.times} calls"
 
       if data.response?
-        console.log "Action is to respond"
-        console.log "  with code #{data.response.code}"
-        console.log "  with body: #{data.response.body}"
+        @printCallback "Action is to respond"
+        @printCallback "  with code #{data.response.code}"
+        @printCallback "  with body: #{data.response.body}"
 
       if data.forward?
-        console.log "Action is to forward all requests to #{data.forward.host}:#{data.forward.port}"
+        @printCallback "Action is to forward all requests to #{data.forward.host}:#{data.forward.port}"
 
       if data.log?
-        console.log "Action is to log all requests"
+        @printCallback "Action is to log all requests"
 
     findMatchingRoutes: (opts) ->
       this.sortRoutesIfNeeded()
@@ -155,30 +156,30 @@ class MockableHttpServer
       @internalDataForRoutes[anId] = {pathRegexp: new RegExp(data.path)}
       this.invalidateSortedRoutes()
 
-      console.log "Added new route #{anId}"
+      @printCallback "Added new route #{anId}"
       this.printRoute data
       
-      console.log "Now we have #{Object.keys(@routes).length} route(s)."
-      console.log ''
+      @printCallback "Now we have #{Object.keys(@routes).length} route(s)."
+      @printCallback ""
 
       return anId
 
     methodRoutesDelete: () ->
-      console.log "Deleted all routes."
-      console.log ''
+      @printCallback "Deleted all routes."
+      @printCallback ""
 
       @routes = {}
       this.invalidateSortedRoutes()
 
     methodRouteGet: (id) ->
       if !@routes[id]?
-        throw new restService.ServerMethodError 404, 'GET', [id]
+        throw new restService.ServerMethodError 404, "GET", [id]
 
       return @routes[id]
 
     methodRoutePost: (id, data) ->
       if !@routes[id]?
-        throw new restService.ServerMethodError 404, 'POST', [id]
+        throw new restService.ServerMethodError 404, "POST", [id]
 
       this.validateRoute data
 
@@ -186,31 +187,31 @@ class MockableHttpServer
       @internalDataForRoutes[id].pathRegexp = new RegExp(data.path)
       this.invalidateSortedRoutes()
 
-      console.log "Updated route #{id}"
+      @printCallback "Updated route #{id}"
       this.printRoute data
-      console.log ''
+      @printCallback ""
 
     methodRouteDelete: (id) ->
       if !@routes[id]?
-        throw new restService.ServerMethodError 404, 'DELETE', [id]
+        throw new restService.ServerMethodError 404, "DELETE", [id]
 
       delete @routes[id]
       this.invalidateSortedRoutes()
 
-      console.log "Deleted route #{id}"
-      console.log ''
+      @printCallback "Deleted route #{id}"
+      @printCallback ""
 
     methodLogGet: (id, timeout) ->
       ret = this.getLoggedRequestsForRouteIfAny id
       if !ret?
         # We will need to wait for it
-        if !timeout? || typeof timeout == 'object'
+        if !timeout? || typeof timeout == "object"
           timeout = DEFAULT_TIMEOUT
 
         ticks = timeout * 1000 / TICK
         timeExpired = 0
-        console.log "Waiting for logs of #{id} up to #{timeout} seconds"
-        console.log ''
+        @printCallback "Waiting for logs of #{id} up to #{timeout} seconds"
+        @printCallback ""
 
         uthis = this
 
@@ -224,15 +225,15 @@ class MockableHttpServer
              clearInterval interval
              resolve ret
 
-             console.log "Sent logs for #{id} after #{timeExpired * 0.001} seconds"
-             console.log ''
+             @printCallback "Sent logs for #{id} after #{timeExpired * 0.001} seconds"
+             @printCallback ""
              return
 
            ticks -= 1
            if ticks < 1
              clearInterval interval
-             console.log "Timeout while waiting for logs of #{id}"
-             console.log ''
+             @printCallback "Timeout while waiting for logs of #{id}"
+             @printCallback ""
 
              reject "Did not get logs of #{id} after timeout of #{timeout}"
            else
@@ -241,8 +242,8 @@ class MockableHttpServer
           interval = setInterval intervalFn, TICK
         return promise
     
-      console.log "Sent logs of #{id}"
-      console.log ''
+      @printCallback "Sent logs of #{id}"
+      @printCallback ""
       return ret
 
     methodLogsGet: () ->
@@ -251,18 +252,18 @@ class MockableHttpServer
     dispatchNoRoutes: (request, response) ->
       response.statusCode = 404
       response.statusMessage = "Not found"
-      response.write 'Not found'
+      response.write "Not found"
       response.end()
 
     tryDispatchInRoute: (request, response, route) ->
       if route.log?
-        buffer = ''
+        buffer = ""
         uthis = this
 
-        request.on 'data', (data) ->
+        request.on "data", (data) ->
           buffer += data
 
-        request.on 'end', () ->
+        request.on "end", () ->
           log = {headers: request.headers, method: request.method, url: request.url, body: buffer}
           uthis.addLoggedRequestForRoute route.key, log
 
@@ -274,8 +275,8 @@ class MockableHttpServer
           delete @internalDataForRoutes[route.key]
           this.invalidateSortedRoutes()
 
-          console.log "Route #{route.key} expired"
-          console.log ''
+          @printCallback "Route #{route.key} expired"
+          @printCallback ""
 
       if route.response?
         response.statusCode = route.response.code
@@ -292,22 +293,22 @@ class MockableHttpServer
 
     dispatch: (request, response) ->
       path = request.url.substring(1)
-      console.log "Dispatch: #{path}"
+      @printCallback "Dispatch: #{path}"
 
       matchedRoutes = this.findMatchingRoutes {path: path, method: request.method}
       if matchedRoutes.length > 0
-        console.log "Matched #{matchedRoutes.length} routes"
+        @printCallback "Matched #{matchedRoutes.length} routes"
         for route in matchedRoutes
-          console.log "In route #{route.key}"
+          @printCallback "In route #{route.key}"
           this.printRoute route
 
           shouldStop = this.tryDispatchInRoute(request, response, route)
           if shouldStop
-            console.log "Stop!"
-            console.log ''
+            @printCallback "Stop!"
+            @printCallback ""
             return
 
-      console.log "No idea how to process the request"
+      @printCallback "No idea how to process the request"
       this.dispatchNoRoutes request, response
 
-exports. MockableHttpServer = MockableHttpServer
+exports.MockableHttpServer = MockableHttpServer

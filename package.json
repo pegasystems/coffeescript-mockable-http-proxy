@@ -19,27 +19,33 @@
     "access-log": "^0.3.x",
     "array-sort": "^0.x",
     "coffee": "^3.x",
-    "coffee-coverage": "^1.x",
     "command-line-args": "^3.x",
-    "connect": "^3.x",
     "http-promises": "^1.x",
     "http-proxy": "^1.x",
     "istanbul": "^0.4.x",
     "jasmine-node": "^1.x",
-    "jsonschema": "^1.x",
     "mock-require": "^1.x",
     "node-rest-client": "^2.x",
+    "react": "^15.4.2",
+    "react-dom": "^15.4.2",
     "rest-middleware": "^1.x",
     "sorted-array": "^2.x",
-    "react": "^15.x",
-    "react-dom": "^15.x",
     "uuid": "^2.x"
   },
   "devDependencies": {
-    "istanbul": "^0.4.5"
+    "gulp": "^3.9.1",
+    "gulp-coffee-istanbul": "^0.9.1",
+    "gulp-cslint": "0.0.1",
+    "gulp-debug": "^3.0.0",
+    "gulp-istanbul": "^1.1.1",
+    "gulp-jasmine": "^2.4.2",
+    "istanbul": "^0.4.5",
+    "jasmine-reporters": "^2.2.0",
+    "jshint": "^2.9.4",
+    "traceur": "0.0.111"
   },
   "scripts": {
-    "test": "jasmine-node --coffee --verbose spec"
+    "test": "gulp test"
   },
   "author": "Tomasz Sieprawski <tomasz.sieprawski@pega.com>",
   "license": "Apache-2.0"

@@ -10,72 +10,72 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-MockableHttpServer = require('./logic').MockableHttpServer
-restService = require 'rest-middleware/server'
-http = require 'http'
-commandLineArgs = require 'command-line-args'
+MockableHttpServer = require("./logic").MockableHttpServer
+restService = require "rest-middleware/server"
+http = require "http"
+commandLineArgs = require "command-line-args"
 
 options = [
-    { name: 'port', alias: 'p', type: Number, defaultValue: 31337 },
-    { name: 'host', alias: 'h', type: String, defaultValue: '0.0.0.0' },
-    { name: 'api-port', type: Number, defaultValue: 31338 }
+    { name: "port", alias: "p", type: Number, defaultValue: 31337 },
+    { name: "host", alias: "h", type: String, defaultValue: "0.0.0.0" },
+    { name: "api-port", type: Number, defaultValue: 31338 }
 ]
 
 args = commandLineArgs options
-mockable_http_server = new MockableHttpServer
+mockableHttpServer = new MockableHttpServer()
 
 publicServerRequestListener = (request, response) ->
-  mockable_http_server.dispatch(request, response)
+  mockableHttpServer.dispatch(request, response)
 
 console.log "Starting public server at #{args.host}:#{args.port}"
 publicServer = http.createServer publicServerRequestListener
 publicServer.listen args.port, args.host
 
-apiServer = restService {name: 'mockable_http_server'}
+apiServer = restService {name: "mockableHttpServer"}
 apiServer.methods {
-  'routes': {
+  "routes": {
     docs: "",
-    url: '/routes',
+    url: "/routes",
 
     get: () ->
-      return mockable_http_server.methodRoutesGet()
+      return mockableHttpServer.methodRoutesGet()
     ,
     post: (data) ->
-      return mockable_http_server.methodRoutesPost(data)
+      return mockableHttpServer.methodRoutesPost(data)
     ,
     delete: () ->
-      return mockable_http_server.methodRoutesDelete()
+      return mockableHttpServer.methodRoutesDelete()
   },
-  'route': {
+  "route": {
     docs: "",
-    url: '/route/:id',
+    url: "/route/:id",
 
     get: (id) ->
-      return mockable_http_server.methodRouteGet(id)
+      return mockableHttpServer.methodRouteGet(id)
     ,
     post: (id, data) ->
-      return mockable_http_server.methodRoutePost(id, data)
+      return mockableHttpServer.methodRoutePost(id, data)
     ,
     delete: (id) ->
-      mockable_http_server.methodRouteDelete(id)
+      mockableHttpServer.methodRouteDelete(id)
   },
-  'logs': {
+  "logs": {
     docs: "",
-    url: '/logs',
+    url: "/logs",
 
     get: () ->
-      return mockable_http_server.methodLogsGet()
+      return mockableHttpServer.methodLogsGet()
   }
-  'log': {
+  "log": {
     docs: "",
-    url: '/log/:id?timeout=:timeout',
+    url: "/log/:id?timeout=:timeout",
 
     get: (id, timeout) ->
-      return mockable_http_server.methodLogGet(id, timeout)
+      return mockableHttpServer.methodLogGet(id, timeout)
   }
 }
 
-console.log "Starting API server at :#{args['api-port']}"
-apiServer.start {port: args['api-port'], silent: true}
+console.log "Starting API server at :#{args["api-port"]}"
+apiServer.start {port: args["api-port"], silent: true}
 
-console.log ''
+console.log ""
