@@ -10,7 +10,7 @@ $ npm install
 
 Run unittests:
 
-$ jasmine-node --coffee --verbose spec
+$ gulp test
 
 Usage:
 

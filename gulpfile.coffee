@@ -23,8 +23,12 @@ gulp.task "test", () ->
         .pipe(istanbul.hookRequire())
         .on("finish", () ->
             gulp.src(["spec/*.coffee"])
-                .pipe(jasmine(includeStackTrace: true))
-                .pipe(istanbul.writeReports())
+                .pipe(jasmine(
+                    verbose: true
+                ))
+                .pipe(istanbul.writeReports(
+                    reporters: ["text", "text-summary", "html"]
+                ))
         )
 
 gulp.task "lint", () ->
@@ -40,7 +44,8 @@ gulp.task "lint", () ->
             "global",
             "it",
             "jasmine",
-            "Objects"
+            "Objects",
+            "pending",
             "require",
             "setInterval"
         ]

@@ -14,7 +14,7 @@ mockRequire = require "mock-require"
 mockProxyServer = jasmine.createSpyObj("proxy", ["web"])
 mockCreateProxyServer = jasmine.createSpy("http-proxy.mockCreateProxyServer").and.callFake (opts) ->
     opts = opts
-    return mockProxyServer
+    mockProxyServer
 
 mockRequire "http-proxy", { createProxyServer: mockCreateProxyServer }
 
@@ -22,10 +22,15 @@ mockableHttpServer = require "../logic"
 
 describe "MockableHttpServer", () ->
     tested =  null
+    setIntervalCallback = null
+    promiseClass = null
 
     beforeEach () ->
         printCallback = jasmine.createSpy("printCallback")
-        tested = new mockableHttpServer.MockableHttpServer(printCallback)
+        setIntervalCallback = jasmine.createSpy("setIntervalCallback")
+        promiseClass = jasmine.createSpy("promiseClass")
+
+        tested = new mockableHttpServer.MockableHttpServer(printCallback, setIntervalCallback, promiseClass)
 
     it "should be defined", () ->
         expect(tested.methodRoutesGet).toBeDefined()
@@ -38,6 +43,12 @@ describe "MockableHttpServer", () ->
 
     it "by default no routes", () ->
         expect(tested.methodRoutesGet()).toEqual {}
+
+    it "prints routes every 60 seconds - no routes", () ->
+        expect(setIntervalCallback.calls.first().args[1]).toEqual 60000
+
+        callback = setIntervalCallback.calls.first().args[0]
+        callback()
 
     it "many no routes", () ->
         for i in [0..10]
@@ -56,12 +67,17 @@ describe "MockableHttpServer", () ->
 
     it "does not add/change/delete nonexistent routes", () ->
         surelyNonexistent = "NAPEWNONIEMA"
-        expect(() ->tested.methodRouteGet(surelyNonexistent)).toThrow
-        expect(() ->tested.methodRoutePost(surelyNonexistent, {})).toThrow
-        expect(() ->tested.methodRouteDelete(surelyNonexistent)).toThrow
+        expect(() ->tested.methodRouteGet()).toThrow()
+        expect(() ->tested.methodRouteGet(surelyNonexistent)).toThrow()
+        expect(() ->tested.methodRoutePost()).toThrow()
+        expect(() ->tested.methodRoutePost(surelyNonexistent)).toThrow()
+        expect(() ->tested.methodRoutePost(null, {})).toThrow()
+        expect(() ->tested.methodRoutePost(surelyNonexistent, {})).toThrow()
+        expect(() ->tested.methodRouteDelete()).toThrow()
+        expect(() ->tested.methodRouteDelete(surelyNonexistent)).toThrow()
 
     it "does not add invalid entry", () ->
-        expect(() ->tested.methodRoutesPost()).toThrow
+        expect(() ->tested.methodRoutesPost()).toThrow()
 
     describe "adds", () ->
         addedEntry = {
@@ -93,18 +109,18 @@ describe "MockableHttpServer", () ->
                 expected = {}
                 addedId = tested.methodRoutesPost(addedEntry)
                 expected[addedId] = addedEntry
-    
+
                 expect(tested.methodRoutesGet()).toEqual expected
                 expect(tested.methodRouteGet(addedId)).toEqual addedEntry
 
             it "and deletes it", () ->
                 tested.methodRouteDelete addedId
                 expect(tested.methodRoutesGet()).toEqual {}
-                expect(() ->tested.methodRouteGet(addedId)).toThrow
-                expect(() ->tested.methodRouteDelete(addedId)).toThrow
+                expect(() ->tested.methodRouteGet(addedId)).toThrow()
+                expect(() ->tested.methodRouteDelete(addedId)).toThrow()
 
             it "and throw when changing to null", () ->
-                expect(() ->tested.methodRoutePost(addedId)).toThrow
+                expect(() ->tested.methodRoutePost(addedId)).toThrow()
 
             it "and changes it", () ->
                 expected = {}
@@ -113,6 +129,13 @@ describe "MockableHttpServer", () ->
                 tested.methodRoutePost addedId, changedEntry
                 expect(tested.methodRoutesGet()).toEqual expected
                 expect(tested.methodRouteGet(addedId)).toEqual changedEntry
+
+
+        it "prints routes every 60 seconds - ANY routes", () ->
+            tested.methodRoutesPost(addedEntry)
+
+            callback = setIntervalCallback.calls.first().args[0]
+            callback()
 
         describe "invalid entry", () ->
             it "no path", () ->
@@ -177,7 +200,7 @@ describe "MockableHttpServer", () ->
                     del expected[nextKey]
 
                     expect(tested.methodRoutesGet()).toEqual expected
-                    expect(callback).toThrow
+                    expect(callback).toThrow()
 
             it "and changes them", () ->
                 for key in Object.keys(expected)
@@ -196,6 +219,15 @@ describe "MockableHttpServer", () ->
         responseEntry = {
             path: "^response$",
             method: "GET",
+            response: {
+                code: 200,
+                body: "ROWER"
+            },
+            priority: 99
+        }
+        responsePostEntry = {
+            path: "^response$",
+            method: "POST",
             response: {
                 code: 200,
                 body: "ROWER"
@@ -221,12 +253,20 @@ describe "MockableHttpServer", () ->
             },
             priority: 1099
         }
+        logEntry = {
+            path: "^log$",
+            method: "GET",
+            priority: 999,
+            log: true
+        }
 
         beforeEach () ->
             tested.methodRoutesDelete()
             tested.methodRoutesPost(responseEntry)
+            tested.methodRoutesPost(responsePostEntry)
             tested.methodRoutesPost(responseTimesEntry)
             tested.methodRoutesPost(forwardEntry)
+            tested.methodRoutesPost(logEntry)
 
             request = jasmine.createSpyObj("request", ["anything", "on"])
             request.on.and.callFake (event, callback) ->
@@ -235,7 +275,7 @@ describe "MockableHttpServer", () ->
 
             request.url = "/invalid"
             request.method = "GET"
-    
+
             response = jasmine.createSpyObj("response", ["end", "write"])
             proxy = jasmine.createSpyObj("proxy", ["web"])
 
@@ -253,6 +293,11 @@ describe "MockableHttpServer", () ->
             expect(response.write).toHaveBeenCalledWith(responseEntry.response.body)
             expect(response.end).toHaveBeenCalledWith
 
+        it "404 for log route", () ->
+            request.url = "/log"
+            tested.dispatch(request, response, proxy)
+            expect(response.statusCode).toEqual 404
+
         it "proxies for forward route", () ->
             request.url = "/forward"
             tested.dispatch(request, response, proxy)
@@ -266,14 +311,14 @@ describe "MockableHttpServer", () ->
             expect(response.statusCode).toEqual responseTimesEntry.response.code
             expect(response.write).toHaveBeenCalledWith(responseTimesEntry.response.body)
             expect(response.end).toHaveBeenCalledWith
-            expect(Object.keys(tested.methodRoutesGet()).length).toEqual(3)
+            expect(Object.keys(tested.methodRoutesGet()).length).toEqual(5)
 
             # 1 -> 0
             tested.dispatch(request, response, proxy)
             expect(response.statusCode).toEqual responseTimesEntry.response.code
             expect(response.write).toHaveBeenCalledWith(responseTimesEntry.response.body)
             expect(response.end).toHaveBeenCalledWith
-            expect(Object.keys(tested.methodRoutesGet()).length).toEqual(2)
+            expect(Object.keys(tested.methodRoutesGet()).length).toEqual(4)
 
             # Already deleted
             tested.dispatch(request, response, proxy)
@@ -281,4 +326,54 @@ describe "MockableHttpServer", () ->
             expect(response.statusMessage).toEqual "Not found"
             expect(response.write).toHaveBeenCalledWith("Not found")
             expect(response.end).toHaveBeenCalledWith
-            expect(Object.keys(tested.methodRoutesGet()).length).toEqual(2)
+            expect(Object.keys(tested.methodRoutesGet()).length).toEqual(4)
+
+    describe "logged requests", () ->
+        beforeEach () ->
+            setIntervalCallback.calls.reset()
+
+        it "not found immediatelly", () ->
+            promiseObj = jasmine.createSpy("promiseObj")
+            resolve = jasmine.createSpy("resolve")
+            reject = jasmine.createSpy("reject")
+            promiseClass.and.returnValue promiseObj
+
+            ret = tested.methodLogGet("anything", 0)
+            expect(ret).toBe(promiseObj)
+
+            call = promiseClass.calls.first().args[0]
+            call(resolve, reject)
+            expect(setIntervalCallback.calls.first().args[1]).toEqual 100
+
+            callback = setIntervalCallback.calls.first().args[0]
+            callback()
+            expect(reject).toHaveBeenCalledWith "Did not get logs of anything after timeout of 0"
+            expect(resolve).not.toHaveBeenCalled()
+
+        it "not found later", () ->
+            promiseObj = jasmine.createSpy("promiseObj")
+            resolve = jasmine.createSpy("resolve")
+            reject = jasmine.createSpy("reject")
+            promiseClass.and.returnValue promiseObj
+
+            ret = tested.methodLogGet("anything", 0.2)
+            expect(ret).toBe(promiseObj)
+
+            call = promiseClass.calls.first().args[0]
+            call(resolve, reject)
+            expect(setIntervalCallback.calls.first().args[1]).toEqual 100
+            callback = setIntervalCallback.calls.first().args[0]
+
+            callback()
+            expect(reject).not.toHaveBeenCalled()
+            expect(resolve).not.toHaveBeenCalled()
+
+            callback()
+            expect(reject).toHaveBeenCalledWith "Did not get logs of anything after timeout of 0.2"
+            expect(resolve).not.toHaveBeenCalled()
+
+        it "found immediatelly", () ->
+            pending()
+
+        it "found later", () ->
+            pending()

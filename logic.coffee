@@ -22,14 +22,17 @@ clone = (obj) ->
   return JSON.parse(JSON.stringify(obj))
 
 class MockableHttpServer
-    constructor: (printCallback=console.log) ->
+    constructor: (printCallback=console.log, setIntervalCallback=global.setInterval, promiseClassCallback=Promise) ->
         @proxy = httpProxy.createProxyServer {}
         @routes = {}
         @loggedRequests = {}
         @internalDataForRoutes = {}
         @sortedRoutes = []
         @areSortedRoutesValid = false
+
         @printCallback = printCallback
+        @setIntervalCallback = setIntervalCallback
+        @promiseClassCallback = promiseClassCallback
 
         uthis = this
         printRoutes = () ->
@@ -42,7 +45,7 @@ class MockableHttpServer
 
           uthis.printCallback ""
 
-        setInterval printRoutes, 60000
+        @setIntervalCallback printRoutes, 60000
 
     sortRoutesIfNeeded: ->
       if @areSortedRoutesValid
@@ -215,7 +218,7 @@ class MockableHttpServer
 
         uthis = this
 
-        promise = new Promise (resolve, reject) ->
+        promise = new @promiseClassCallback (resolve, reject) ->
          interval = null
 
          intervalFn = () ->
@@ -225,21 +228,21 @@ class MockableHttpServer
              clearInterval interval
              resolve ret
 
-             @printCallback "Sent logs for #{id} after #{timeExpired * 0.001} seconds"
-             @printCallback ""
+             uthis.printCallback "Sent logs for #{id} after #{timeExpired * 0.001} seconds"
+             uthis.printCallback ""
              return
 
            ticks -= 1
            if ticks < 1
              clearInterval interval
-             @printCallback "Timeout while waiting for logs of #{id}"
-             @printCallback ""
+             uthis.printCallback "Timeout while waiting for logs of #{id}"
+             uthis.printCallback ""
 
              reject "Did not get logs of #{id} after timeout of #{timeout}"
            else
              timeExpired += TICK
 
-          interval = setInterval intervalFn, TICK
+          interval = uthis.setIntervalCallback intervalFn, TICK
         return promise
     
       @printCallback "Sent logs of #{id}"
