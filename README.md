@@ -1,3 +1,5 @@
+[![Docker Automated build(https://img.shields.io/docker/automated/tsieprawskipega/coffeescript-mockable-http-server.svg)]()
+
 # Mockable HTTP Server
 
 Very simple http server, that is steerable (until some point) from remote.
@@ -10,7 +12,7 @@ By default it opens 2 ports:
 
 ```shell
 $ npm install
-```
+```v
 
 # Run unittests
 
