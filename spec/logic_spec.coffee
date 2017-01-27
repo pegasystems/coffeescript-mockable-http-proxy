@@ -31,6 +31,7 @@ describe "MockableHttpServer", () ->
         promiseClass = jasmine.createSpy("promiseClass")
 
         tested = new mockableHttpServer.MockableHttpServer(printCallback, setIntervalCallback, promiseClass)
+        null
 
     it "should be defined", () ->
         expect(tested.methodRoutesGet).toBeDefined()
@@ -278,6 +279,7 @@ describe "MockableHttpServer", () ->
 
             response = jasmine.createSpyObj("response", ["end", "write"])
             proxy = jasmine.createSpyObj("proxy", ["web"])
+            null
 
         it "404s when cannot route", () ->
             tested.dispatch(request, response, proxy)

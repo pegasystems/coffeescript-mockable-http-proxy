@@ -54,6 +54,9 @@ gulp.task "lint", () ->
             "global-strict": "off",
             "no-console": "allow"
             "no-return-assignment": "allow"
+            "no-shadow": "allow"
+            "no-undef": "allow"
+            "no-unused-expressions": "allow"
 
     gulp.src(["*.coffee", "spec/*.coffee"])
         .pipe(cslint(opts))

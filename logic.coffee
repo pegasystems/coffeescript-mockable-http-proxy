@@ -19,7 +19,7 @@ arraySort = require "array-sort"
 httpProxy = require "http-proxy"
 
 clone = (obj) ->
-  return JSON.parse(JSON.stringify(obj))
+  JSON.parse(JSON.stringify(obj))
 
 class MockableHttpServer
     constructor: (printCallback=console.log, setIntervalCallback=global.setInterval, promiseClassCallback=Promise) ->
@@ -32,7 +32,7 @@ class MockableHttpServer
 
         @printCallback = printCallback
         @setIntervalCallback = setIntervalCallback
-        @promiseClassCallback = promiseClassCallback
+        @PromiseClassCallback = promiseClassCallback
 
         uthis = this
         printRoutes = () ->
@@ -49,7 +49,7 @@ class MockableHttpServer
 
     sortRoutesIfNeeded: ->
       if @areSortedRoutesValid
-        return
+        return null
 
       compareFunction = (left, right) ->
         return right.priority - left.priority
@@ -63,9 +63,11 @@ class MockableHttpServer
 
       @sortedRoutes = arraySort values, compareFunction
       @areSortedRoutesValid = true
+      null
 
     invalidateSortedRoutes: ->
       @areSortedRoutesValid = false
+      null
 
     validateRoute: (data) ->
       if !data?
@@ -218,31 +220,33 @@ class MockableHttpServer
 
         uthis = this
 
-        promise = new @promiseClassCallback (resolve, reject) ->
-         interval = null
+        promise = new @PromiseClassCallback (resolve, reject) ->
+          interval = null
 
-         intervalFn = () ->
-           ret = uthis.getLoggedRequestsForRouteIfAny id
+          intervalFn = () ->
+            ret = uthis.getLoggedRequestsForRouteIfAny id
 
-           if ret?
-             clearInterval interval
-             resolve ret
+            if ret?
+              clearInterval interval
+              resolve ret
 
-             uthis.printCallback "Sent logs for #{id} after #{timeExpired * 0.001} seconds"
-             uthis.printCallback ""
-             return
+              uthis.printCallback "Sent logs for #{id} after #{timeExpired * 0.001} seconds"
+              uthis.printCallback ""
+            else
+              ticks -= 1
+              if ticks < 1
+                clearInterval interval
+                uthis.printCallback "Timeout while waiting for logs of #{id}"
+                uthis.printCallback ""
 
-           ticks -= 1
-           if ticks < 1
-             clearInterval interval
-             uthis.printCallback "Timeout while waiting for logs of #{id}"
-             uthis.printCallback ""
-
-             reject "Did not get logs of #{id} after timeout of #{timeout}"
-           else
-             timeExpired += TICK
+                reject "Did not get logs of #{id} after timeout of #{timeout}"
+              else
+                timeExpired += TICK
+            null
 
           interval = uthis.setIntervalCallback intervalFn, TICK
+          null
+
         return promise
     
       @printCallback "Sent logs of #{id}"
@@ -265,6 +269,7 @@ class MockableHttpServer
 
         request.on "data", (data) ->
           buffer += data
+          null
 
         request.on "end", () ->
           log = {headers: request.headers, method: request.method, url: request.url, body: buffer}
@@ -309,9 +314,11 @@ class MockableHttpServer
           if shouldStop
             @printCallback "Stop!"
             @printCallback ""
-            return
+            return null
 
       @printCallback "No idea how to process the request"
       this.dispatchNoRoutes request, response
+      null
 
+# eslint no-unused-expressions: "allow"
 exports.MockableHttpServer = MockableHttpServer
