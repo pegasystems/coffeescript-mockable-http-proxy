@@ -3,7 +3,7 @@
 
 # Mockable HTTP Server
 
-Very simple http server, that is steerable (until some point) from remote.
+Very simple http proxy, that is steerable (until some point) from remote.
 
 By default it opens 2 ports:
 * on `0.0.0.0:31337` HTTP server routes requests according to rules defined by REST API,
