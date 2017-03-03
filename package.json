@@ -16,7 +16,7 @@
     "url": "pegasystems/coffeescript-mockable-http-proxy"
   },
   "dependencies": {
-    "access-log": "^0.3.x",
+    "access-log": "^0.3.9",
     "array-sort": "^0.x",
     "coffee": "^3.x",
     "command-line-args": "^3.x",

@@ -14,22 +14,28 @@ MockableHttpServer = require("./logic").MockableHttpServer
 restService = require "rest-middleware/server"
 http = require "http"
 commandLineArgs = require "command-line-args"
+accesslog = require "access-log"
 
 options = [
     { name: "port", alias: "p", type: Number, defaultValue: 31337 },
     { name: "host", alias: "h", type: String, defaultValue: "0.0.0.0" },
-    { name: "api-port", type: Number, defaultValue: 31338 }
+    { name: "api-port", type: Number, defaultValue: 31338 },
+    { name: "timeout", alias: "t", type: Number }
 ]
 
 args = commandLineArgs options
 mockableHttpServer = new MockableHttpServer()
 
 publicServerRequestListener = (request, response) ->
+  accesslog(request, response)
   mockableHttpServer.dispatch(request, response)
 
 console.log "Starting public server at #{args.host}:#{args.port}"
 publicServer = http.createServer publicServerRequestListener
 publicServer.listen args.port, args.host
+console.info args
+if args.timeout > 0
+  publicServer.timeout = args.timeout * 1000
 
 apiServer = restService {name: "mockableHttpServer"}
 apiServer.methods {
