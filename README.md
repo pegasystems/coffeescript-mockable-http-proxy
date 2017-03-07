@@ -1,5 +1,5 @@
 [![Docker Automated build](https://img.shields.io/docker/automated/tsieprawskipega/coffeescript-mockable-http-server.svg)]()
-[![Travis](https://img.shields.io/travis/pegasystems/coffeescript-mockable-http-proxy.svg)]()
+[![Travis](https://img.shields.io/travis/pegasystems/coffeescript-mockable-http-proxy.svg)](https://travis-ci.org/pegasystems/coffeescript-mockable-http-proxy)
 
 # Mockable HTTP Server
 
@@ -11,23 +11,24 @@ By default it opens 2 ports:
 
 # Installation
 
-```shell
+```
 $ npm install
-```v
+```
 
 # Run unittests
 
-```shell
+```
 $ gulp test
 ```
 
 # Usage
 
-```shell
+```
 $ coffee main.coffee
 Starting public server at 0.0.0.0:31337
 Starting API server at :31338
 ```
+
 ... and it will keep running.
 
 # REST API
