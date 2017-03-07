@@ -1,4 +1,4 @@
-[![Docker Automated build](https://img.shields.io/docker/automated/tsieprawskipega/coffeescript-mockable-http-server.svg)]()
+[![Docker Automated build](https://img.shields.io/docker/automated/tsieprawskipega/coffeescript-mockable-http-server.svg)](https://hub.docker.com/r/tsieprawskipega/coffeescript-mockable-http-proxy/)
 [![Travis](https://img.shields.io/travis/pegasystems/coffeescript-mockable-http-proxy.svg)](https://travis-ci.org/pegasystems/coffeescript-mockable-http-proxy)
 
 # Mockable HTTP Server
@@ -30,6 +30,13 @@ Starting API server at :31338
 ```
 
 ... and it will keep running.
+
+## Or in docker
+
+```
+$ docker pull tsieprawskipega/coffeescript-mockable-http-proxy
+$ docker run -p 31338:31338 -p 31337:31337 tsieprawskipega/coffeescript-mockable-http-proxy
+```
 
 # REST API
 
