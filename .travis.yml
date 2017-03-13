@@ -4,9 +4,10 @@ node_js:
   - "5"
 before_script:
   - npm install -g gulp
-  - npm install -g ci-publish
   - npm install
 script:
   - gulp
-after-script:
+before_deploy:
+  - npm install -g ci-publish
+deploy:
   - ci-publish
