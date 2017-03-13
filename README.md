@@ -1,5 +1,6 @@
 [![Docker Automated build](https://img.shields.io/docker/automated/tsieprawskipega/coffeescript-mockable-http-server.svg)](https://hub.docker.com/r/tsieprawskipega/coffeescript-mockable-http-proxy/)
 [![Travis](https://img.shields.io/travis/pegasystems/coffeescript-mockable-http-proxy.svg)](https://travis-ci.org/pegasystems/coffeescript-mockable-http-proxy)
+[![npm](https://img.shields.io/npm/v/coffeescript-mockable-http-server.svg)](coffeescript-mockable-http-server)
 
 # Mockable HTTP Server
 
