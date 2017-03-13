@@ -1,9 +1,5 @@
 #!/bin/bash
 set -x
 
-cat << EOF > build2.sh
-npm install || exit 1
-gulp || exit 1
-EOF
-
-docker run -v $(pwd):/home -w /home --rm bb2513e72695 bash /home/build2.sh
+docker build -t tsieprawskipega/coffeescript-mockable-http-proxy .
+docker run -p 31338:31338 -p 31337:31337 tsieprawskipega/coffeescript-mockable-http-proxy -- npm test

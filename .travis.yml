@@ -3,9 +3,10 @@ node_js:
   - "6"
   - "5"
 before_script:
-  - echo "//registry.npmjs.org/:${NPM_API_KEY}" >> ~/.npmrc
   - npm install -g gulp
+  - npm install -g ci-publish
   - npm install
-  - test "${TRAVIS_BRANCH}" == master && npm publish
 script:
   - gulp
+after-script:
+  - ci-publish
