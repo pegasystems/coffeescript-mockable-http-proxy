@@ -27,7 +27,7 @@ gulp.task "test", () ->
                     verbose: true
                 ))
                 .pipe(istanbul.writeReports(
-                    reporters: ["text", "text-summary", "html"]
+                    reporters: ["text", "text-summary", "html", "lcov"]
                 ))
         )
 

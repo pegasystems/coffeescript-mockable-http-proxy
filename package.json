@@ -34,6 +34,7 @@
   },
   "devDependencies": {
     "ci-publish": "^1.3.0",
+    "coveralls": "2.13.0",
     "gulp": "^3.9.1",
     "gulp-coffee-istanbul": "^0.9.1",
     "gulp-cslint": "0.0.1",
