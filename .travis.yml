@@ -8,4 +8,5 @@ before_script:
 script:
   - gulp
   - test "${TRAVIS_BRANCH}" == master && ci-publish
+after_success:
   - cat coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js
