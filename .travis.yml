@@ -5,6 +5,8 @@ before_script:
   - npm install -g gulp
   - npm install -g ci-publish
   - npm install
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
 script:
   - gulp
   - test "${TRAVIS_BRANCH}" == master && ci-publish
