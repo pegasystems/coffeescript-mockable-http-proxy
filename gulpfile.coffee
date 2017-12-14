@@ -62,5 +62,6 @@ gulp.task "lint", () ->
         .pipe(cslint(opts))
         .pipe(cslint.format())
         .pipe(cslint.failOnError())
+        .pipe(codecov())
 
 gulp.task "default", ["test", "lint"]
