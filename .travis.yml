@@ -9,4 +9,3 @@ after_success:
   - bash <(curl -s https://codecov.io/bash)
 script:
   - gulp
-  - test "${TRAVIS_BRANCH}" == master && ci-publish
