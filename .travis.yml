@@ -6,7 +6,5 @@ before_script:
   - npm install -g ci-publish
   - npm install -g gulp-codecov
   - npm install
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
 script:
   - gulp
