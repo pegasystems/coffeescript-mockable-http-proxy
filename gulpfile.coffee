@@ -14,6 +14,7 @@ gulp = require "gulp"
 jasmine = require "gulp-jasmine"
 istanbul = require "gulp-coffee-istanbul"
 cslint = require "gulp-cslint"
+codecov = require "gulp-codecov"
 
 require "coffee-script/register"
 
