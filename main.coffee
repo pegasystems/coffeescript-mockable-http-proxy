@@ -20,7 +20,7 @@ options = [
     { name: "port", alias: "p", type: Number, defaultValue: 31337 },
     { name: "host", alias: "h", type: String, defaultValue: "0.0.0.0" },
     { name: "api-port", type: Number, defaultValue: 31338 },
-    { name: "timeout", alias: "t", type: Number }
+    { name: "timeout", alias: "t", type: Number, defaultvalue: 300 }
 ]
 
 args = commandLineArgs options
