@@ -1,18 +1,17 @@
-FROM debian:jessie
+FROM node:alpine
 
-RUN apt-get update
-RUN apt-get install -y curl sudo
-RUN curl -sL https://deb.nodesource.com/setup_7.x | sudo -E bash -
-RUN apt-get install -y nodejs
-RUN npm install -g gulp
-
-RUN mkdir /cmhp
 COPY package.json /cmhp/package.json
 COPY main.coffee /cmhp/main.coffee
 COPY logic.coffee /cmhp/logic.coffee
 
-RUN apt-get install -y git
-RUN cd /cmhp && npm install
+RUN apk update && \
+    apk upgrade && \
+    apk add --no-cache bash git openssh && \
+    npm install -g gulp
+
+RUN cd /cmhp && \
+    npm install
 
 EXPOSE 31337 31338
-ENTRYPOINT ["/cmhp/node_modules/coffee-script/bin/coffee", "/cmhp/main.coffee"]
+WORKDIR /cmhp
+ENTRYPOINT ["node_modules/coffee-script/bin/coffee", "main.coffee"]
