@@ -54,20 +54,29 @@ apiServer.methods {
     * times: uint
       OPTIONAL. The route will expire after these number of calls.
     * method:  string
-      OPTIONAL. Matches only specified method. If absent, all methods are matched.
+      OPTIONAL. Matches only specified method. If absent, all methods are
+      matched.
     * log: true
-      OPTIONAL. If present, you can issue http://127.0.0.1:31337/log/{route_id} to receive logged request.
+      OPTIONAL. If present, you can issue http://127.0.0.1:31337/log/{route_id}
+      to receive logged request.
     * priority: int
-      REQUIRED. Priority of the route. Routes with higher priority are processed first.
+      REQUIRED. Priority of the route. Routes with higher priority are
+      processed first.
     * response:
-      REQUIRED, conflicts with forward. This action will send predefined static response.
+      REQUIRED, conflicts with forward. This action will send predefined static
+      response.
         code: uint. HTTP code to send.
         body: string. Body of HTTP response.
     * forward:
       REQUIRED, conflicts with response.
-      Will silently relay HTTP request to specified server. And relay back the response.
+      Will silently relay HTTP request to specified server. And relay back
+      the response.
       * host: string
       * port: uint
+    * delay:
+      OPTIONAL, requires forward, conflicts with log.
+      Will delay relaying the HTTP request by specified time.
+      * time: uint
 
     Example request body:
       ```
@@ -133,7 +142,8 @@ apiServer.methods {
 
     Example response body:
     ```
-        ["05310fd0-701e-11e6-bf06-bd0e3cf367e9","07153920-701e-11e6-bf06-bd0e3cf367e9"]
+        ["05310fd0-701e-11e6-bf06-bd0e3cf367e9",
+          "07153920-701e-11e6-bf06-bd0e3cf367e9"]
     ```
 
     """,
@@ -152,7 +162,8 @@ apiServer.methods {
     * if there are any answers right now, they are returned.
     * otherwise server will hold the request for up to given timeout. Treat this
     as slow polling.
-    * if there are still no answers after the timeout, this will return 404 error.
+    * if there are still no answers after the timeout, this will return
+    404 error.
 
     This call is destructive - after a successful GET, the answers are removed
     from the cache, and they won't appear in next requests.

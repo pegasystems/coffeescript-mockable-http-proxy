@@ -22,303 +22,333 @@ clone = (obj) ->
   JSON.parse(JSON.stringify(obj))
 
 class MockableHttpServer
-    constructor: (printCallback=console.log, setIntervalCallback=global.setInterval, promiseClassCallback=Promise) ->
-        @proxy = httpProxy.createProxyServer {}
-        @routes = {}
-        @loggedRequests = {}
-        @internalDataForRoutes = {}
-        @sortedRoutes = []
-        @areSortedRoutesValid = false
+  constructor: (printCallback=console.log, \
+                setIntervalCallback=global.setInterval,
+                setTimeoutCallback=global.setTimeout,
+                promiseClassCallback=Promise) ->
+    @proxy = httpProxy.createProxyServer {}
+    @routes = {}
+    @loggedRequests = {}
+    @internalDataForRoutes = {}
+    @sortedRoutes = []
+    @areSortedRoutesValid = false
 
-        @printCallback = printCallback
-        @setIntervalCallback = setIntervalCallback
-        @PromiseClassCallback = promiseClassCallback
+    @printCallback = printCallback
+    @setIntervalCallback = setIntervalCallback
+    @setTimeoutCallback = setTimeoutCallback
+    @PromiseClassCallback = promiseClassCallback
 
-        uthis = this
-        printRoutes = () ->
-          uthis.printCallback ""
-          uthis.printCallback "We have #{Object.keys(uthis.routes).length} routes:"
+    uthis = this
+    printRoutes = () ->
+      uthis.printCallback ""
+      uthis.printCallback "We have #{Object.keys(uthis.routes).length} " + \
+                          "routes:"
 
-          for key in Object.keys(uthis.routes)
-            uthis.printCallback "### #{key}"
-            uthis.printRoute uthis.routes[key]
+      for key in Object.keys(uthis.routes)
+        uthis.printCallback "### #{key}"
+        uthis.printRoute uthis.routes[key]
 
-          uthis.printCallback ""
+      uthis.printCallback ""
 
-        @setIntervalCallback printRoutes, 60000
+    @setIntervalCallback printRoutes, 60000
 
-    sortRoutesIfNeeded: ->
-      if @areSortedRoutesValid
-        return null
+  sortRoutesIfNeeded: ->
+    if @areSortedRoutesValid
+      return null
 
-      compareFunction = (left, right) ->
-        return right.priority - left.priority
+    compareFunction = (left, right) ->
+      return right.priority - left.priority
 
-      values = []
-      for key in Object.keys(@routes)
-        value = @routes[key]
-        nvalue = clone(value)
-        nvalue.key = key
-        values.push nvalue
+    values = []
+    for key in Object.keys(@routes)
+      value = @routes[key]
+      nvalue = clone(value)
+      nvalue.key = key
+      values.push nvalue
 
-      @sortedRoutes = arraySort values, compareFunction
-      @areSortedRoutesValid = true
-      null
+    @sortedRoutes = arraySort values, compareFunction
+    @areSortedRoutesValid = true
+    null
 
-    invalidateSortedRoutes: ->
-      @areSortedRoutesValid = false
-      null
+  invalidateSortedRoutes: ->
+    @areSortedRoutesValid = false
+    null
 
-    validateRoute: (data) ->
-      if !data?
+  validateRoute: (data) ->
+    if !data?
+      throw new restService.ServerMethodError 400, "POST", [],
+        "Invalid route data: empty"
+
+    if !data.path? || !data.priority?
+      throw new restService.ServerMethodError 400, "POST", [],
+        "Invalid route data: no path or priority"
+
+    if data.times?
+      times = parseInt(data.times)
+      if isNaN(times) or times <= 0
         throw new restService.ServerMethodError 400, "POST", [],
-          "Invalid route data: empty"
+          "Invalid route data: times must be a non-negative integer"
 
-      if !data.path? || !data.priority?
+    if data.method? and data.method != "POST" and data.method != "GET"
+      throw new restService.ServerMethodError 400, "POST", [],
+        "Invalid route data: method must be POST or GET"
+
+    if data.delay?
+      if !data.forward?
         throw new restService.ServerMethodError 400, "POST", [],
-          "Invalid route data: no path or priority"
-
-      if data.times?
-        times = parseInt(data.times)
-        if isNaN(times) or times <= 0
-          throw new restService.ServerMethodError 400, "POST", [],
-            "Invalid route data: times must be a non-negative integer"
-
-      if data.method? and data.method != "POST" and data.method != "GET"
-        throw new restService.ServerMethodError 400, "POST", [],
-          "Invalid route data: method must be POST or GET"
-
-      if data.response? or data.log? or data.forward?
-          if data.response?
-            if !data.response.code? || !data.response.body?
-              throw new restService.ServerMethodError 400, "POST", [],
-                "Invalid route data: response must have code and body"
-          if data.forward?
-            if !data.forward.host? or !data.forward.port?
-              throw new restService.ServerMethodError 400, "POST", [],
-                "Invalid route data: forward must have host and port"
-      else
-        throw new restService.ServerMethodError 400, "POST", [],
-          "Invalid route data: no action provided"
-
-    printRoute: (data) ->
-      @printCallback "  with priority: #{data.priority}"
-      @printCallback "  for URL: #{data.path}"
-
-      if data.method?
-        @printCallback "  for method: #{data.method}"
-
-      if data.times?
-        @printCallback "  will expire after #{data.times} calls"
-
-      if data.response?
-        @printCallback "Action is to respond"
-        @printCallback "  with code #{data.response.code}"
-        @printCallback "  with body: #{data.response.body}"
-
-      if data.forward?
-        @printCallback "Action is to forward all requests to #{data.forward.host}:#{data.forward.port}"
-
+          "Invalid route data: delay requires forward"
       if data.log?
-        @printCallback "Action is to log all requests"
+        throw new restService.ServerMethodError 400, "POST", [],
+          "Invalid route data: delay conflicts with log"
 
-    findMatchingRoutes: (opts) ->
-      this.sortRoutesIfNeeded()
-      matched = []
+    if data.response? or data.log? or data.forward?
+      if data.response?
+        if !data.response.code? || !data.response.body?
+          throw new restService.ServerMethodError 400, "POST", [],
+            "Invalid route data: response must have code and body"
+      if data.forward?
+        if !data.forward.host? or !data.forward.port?
+          throw new restService.ServerMethodError 400, "POST", [],
+            "Invalid route data: forward must have host and port"
+    else
+      throw new restService.ServerMethodError 400, "POST", [],
+        "Invalid route data: no action provided"
 
-      for route in @sortedRoutes
-        pathRegexp = @internalDataForRoutes[route.key].pathRegexp
+  printRoute: (data) ->
+    @printCallback "  with priority: #{data.priority}"
+    @printCallback "  for URL: #{data.path}"
 
-        if not pathRegexp.test(opts.path)
-          continue
+    if data.method?
+      @printCallback "  for method: #{data.method}"
 
-        if route.method? and opts.method != route.method
-          continue
+    if data.times?
+      @printCallback "  will expire after #{data.times} calls"
 
-        matched.push route
+    if data.response?
+      @printCallback "Action is to respond"
+      @printCallback "  with code #{data.response.code}"
+      @printCallback "  with body: #{data.response.body}"
 
-      return matched
+    if data.forward?
+      @printCallback "Action is to forward all requests to " +
+                     "#{data.forward.host}:#{data.forward.port}"
+      if data.delay?
+        @printCallback "  and delay HTTP request by #{data.delay} seconds"
 
-    addLoggedRequestForRoute: (id, request) ->
-      if !@loggedRequests[id]?
-        @loggedRequests[id] = []
-      @loggedRequests[id].push request
+    if data.log?
+      @printCallback "Action is to log all requests"
 
-    getLoggedRequestsForRouteIfAny: (id) ->
-      ret = @loggedRequests[id]
-      if ret?
-        delete @loggedRequests[id]
-      return ret
+  findMatchingRoutes: (opts) ->
+    this.sortRoutesIfNeeded()
+    matched = []
 
-    methodRoutesGet: () ->
-      return @routes
+    for route in @sortedRoutes
+      pathRegexp = @internalDataForRoutes[route.key].pathRegexp
 
-    methodRoutesPost: (data) ->
-      this.validateRoute data
+      if not pathRegexp.test(opts.path)
+        continue
 
-      anId = uuid.v1()
-      @routes[anId] = data
-      @internalDataForRoutes[anId] = {pathRegexp: new RegExp(data.path)}
-      this.invalidateSortedRoutes()
+      if route.method? and opts.method != route.method
+        continue
 
-      @printCallback "Added new route #{anId}"
-      this.printRoute data
-      
-      @printCallback "Now we have #{Object.keys(@routes).length} route(s)."
+      matched.push route
+
+    return matched
+
+  addLoggedRequestForRoute: (id, request) ->
+    if !@loggedRequests[id]?
+      @loggedRequests[id] = []
+    @loggedRequests[id].push request
+
+  getLoggedRequestsForRouteIfAny: (id) ->
+    ret = @loggedRequests[id]
+    if ret?
+      delete @loggedRequests[id]
+    return ret
+
+  methodRoutesGet: () ->
+    return @routes
+
+  methodRoutesPost: (data) ->
+    this.validateRoute data
+
+    anId = uuid.v1()
+    @routes[anId] = data
+    @internalDataForRoutes[anId] = {pathRegexp: new RegExp(data.path)}
+    this.invalidateSortedRoutes()
+
+    @printCallback "Added new route #{anId}"
+    this.printRoute data
+    
+    @printCallback "Now we have #{Object.keys(@routes).length} route(s)."
+    @printCallback ""
+
+    return anId
+
+  methodRoutesDelete: () ->
+    @printCallback "Deleted all routes."
+    @printCallback ""
+
+    @routes = {}
+    this.invalidateSortedRoutes()
+
+  methodRouteGet: (id) ->
+    if !@routes[id]?
+      throw new restService.ServerMethodError 404, "GET", [id]
+
+    return @routes[id]
+
+  methodRoutePost: (id, data) ->
+    if !@routes[id]?
+      throw new restService.ServerMethodError 404, "POST", [id]
+
+    this.validateRoute data
+
+    @routes[id] = data
+    @internalDataForRoutes[id].pathRegexp = new RegExp(data.path)
+    this.invalidateSortedRoutes()
+
+    @printCallback "Updated route #{id}"
+    this.printRoute data
+    @printCallback ""
+
+  methodRouteDelete: (id) ->
+    if !@routes[id]?
+      throw new restService.ServerMethodError 404, "DELETE", [id]
+
+    delete @routes[id]
+    this.invalidateSortedRoutes()
+
+    @printCallback "Deleted route #{id}"
+    @printCallback ""
+
+  methodLogGet: (id, timeout) ->
+    ret = this.getLoggedRequestsForRouteIfAny id
+    if !ret?
+      # We will need to wait for it
+      if !timeout? || typeof timeout == "object"
+        timeout = DEFAULT_TIMEOUT
+
+      ticks = timeout * 1000 / TICK
+      timeExpired = 0
+      @printCallback "Waiting for logs of #{id} up to #{timeout} seconds"
       @printCallback ""
 
-      return anId
+      uthis = this
 
-    methodRoutesDelete: () ->
-      @printCallback "Deleted all routes."
-      @printCallback ""
+      promise = new @PromiseClassCallback (resolve, reject) ->
+        interval = null
 
-      @routes = {}
-      this.invalidateSortedRoutes()
+        intervalFn = () ->
+          ret = uthis.getLoggedRequestsForRouteIfAny id
 
-    methodRouteGet: (id) ->
-      if !@routes[id]?
-        throw new restService.ServerMethodError 404, "GET", [id]
+          if ret?
+            clearInterval interval
+            resolve ret
 
-      return @routes[id]
+            uthis.printCallback "Sent logs for #{id} after " +
+                                "#{timeExpired * 0.001} seconds"
+            uthis.printCallback ""
+          else
+            ticks -= 1
+            if ticks < 1
+              clearInterval interval
+              uthis.printCallback "Timeout while waiting for logs of #{id}"
+              uthis.printCallback ""
 
-    methodRoutePost: (id, data) ->
-      if !@routes[id]?
-        throw new restService.ServerMethodError 404, "POST", [id]
+              reject "Did not get logs of #{id} after timeout of #{timeout}"
+            else
+              timeExpired += TICK
+          null
 
-      this.validateRoute data
+        interval = uthis.setIntervalCallback intervalFn, TICK
+        null
 
-      @routes[id] = data
-      @internalDataForRoutes[id].pathRegexp = new RegExp(data.path)
-      this.invalidateSortedRoutes()
+      return promise
+  
+    @printCallback "Sent logs of #{id}"
+    @printCallback ""
+    return ret
 
-      @printCallback "Updated route #{id}"
-      this.printRoute data
-      @printCallback ""
+  methodLogsGet: () ->
+    return Object.keys(@loggedRequests)
+  
+  dispatchNoRoutes: (request, response) ->
+    response.statusCode = 404
+    response.statusMessage = "Not found"
+    response.write "Not found"
+    response.end()
 
-    methodRouteDelete: (id) ->
-      if !@routes[id]?
-        throw new restService.ServerMethodError 404, "DELETE", [id]
+  tryDispatchInRoute: (request, response, route) ->
+    uthis = this
+    if route.log?
+      buffer = ""
 
-      delete @routes[id]
-      this.invalidateSortedRoutes()
+      request.on "data", (data) ->
+        buffer += data
+        uthis.printCallback "Request more data #{data.length}"
+        null
 
-      @printCallback "Deleted route #{id}"
-      @printCallback ""
+      request.on "end", () ->
+        uthis.printCallback "Request end"
+        log = {headers: request.headers, method: request.method, \
+               url: request.url, body: buffer}
+        uthis.addLoggedRequestForRoute route.key, log
+        null
 
-    methodLogGet: (id, timeout) ->
-      ret = this.getLoggedRequestsForRouteIfAny id
-      if !ret?
-        # We will need to wait for it
-        if !timeout? || typeof timeout == "object"
-          timeout = DEFAULT_TIMEOUT
+    if route.times?
+      route.times -= 1
 
-        ticks = timeout * 1000 / TICK
-        timeExpired = 0
-        @printCallback "Waiting for logs of #{id} up to #{timeout} seconds"
+      if route.times <= 0
+        delete @routes[route.key]
+        delete @internalDataForRoutes[route.key]
+        this.invalidateSortedRoutes()
+
+        @printCallback "Route #{route.key} expired"
         @printCallback ""
 
-        uthis = this
-
-        promise = new @PromiseClassCallback (resolve, reject) ->
-          interval = null
-
-          intervalFn = () ->
-            ret = uthis.getLoggedRequestsForRouteIfAny id
-
-            if ret?
-              clearInterval interval
-              resolve ret
-
-              uthis.printCallback "Sent logs for #{id} after #{timeExpired * 0.001} seconds"
-              uthis.printCallback ""
-            else
-              ticks -= 1
-              if ticks < 1
-                clearInterval interval
-                uthis.printCallback "Timeout while waiting for logs of #{id}"
-                uthis.printCallback ""
-
-                reject "Did not get logs of #{id} after timeout of #{timeout}"
-              else
-                timeExpired += TICK
-            null
-
-          interval = uthis.setIntervalCallback intervalFn, TICK
-          null
-
-        return promise
-    
-      @printCallback "Sent logs of #{id}"
-      @printCallback ""
-      return ret
-
-    methodLogsGet: () ->
-      return Object.keys(@loggedRequests)
-    
-    dispatchNoRoutes: (request, response) ->
-      response.statusCode = 404
-      response.statusMessage = "Not found"
-      response.write "Not found"
+    if route.response?
+      response.statusCode = route.response.code
+      response.write route.response.body
       response.end()
+      return true
 
-    tryDispatchInRoute: (request, response, route) ->
-      if route.log?
-        buffer = ""
-        uthis = this
+    if route.forward?
+      target = "http://#{route.forward.host}:#{route.forward.port}"
 
-        request.on "data", (data) ->
-          buffer += data
-          null
+      if route.delay?
+        @printCallback "Delaying by #{route.delay} seconds"
 
-        request.on "end", () ->
-          log = {headers: request.headers, method: request.method, url: request.url, body: buffer}
-          uthis.addLoggedRequestForRoute route.key, log
+        cbk = () ->
+          uthis.proxy.web request, response, {target: target}
 
-      if route.times?
-        route.times -= 1
-
-        if route.times <= 0
-          delete @routes[route.key]
-          delete @internalDataForRoutes[route.key]
-          this.invalidateSortedRoutes()
-
-          @printCallback "Route #{route.key} expired"
-          @printCallback ""
-
-      if route.response?
-        response.statusCode = route.response.code
-        response.write route.response.body
-        response.end()
-        return true
-
-      if route.forward?
-        target = "http://#{route.forward.host}:#{route.forward.port}"
+        @setTimeoutCallback cbk, (route.delay) * 1000
+      else
         @proxy.web request, response, {target: target}
-        return true
 
-      return false
+      return true
 
-    dispatch: (request, response) ->
-      path = request.url.substring(1)
-      @printCallback "Dispatch: #{path}"
+    return false
 
-      matchedRoutes = this.findMatchingRoutes {path: path, method: request.method}
-      if matchedRoutes.length > 0
-        @printCallback "Matched #{matchedRoutes.length} routes"
-        for route in matchedRoutes
-          @printCallback "In route #{route.key}"
-          this.printRoute route
+  dispatch: (request, response) ->
+    path = request.url.substring(1)
+    @printCallback "Dispatch: #{path}"
 
-          shouldStop = this.tryDispatchInRoute(request, response, route)
-          if shouldStop
-            @printCallback "Stop!"
-            @printCallback ""
-            return null
+    matchedRoutes = this.findMatchingRoutes {path: path, \
+                                             method: request.method}
+    if matchedRoutes.length > 0
+      @printCallback "Matched #{matchedRoutes.length} routes"
+      for route in matchedRoutes
+        @printCallback "In route #{route.key}"
+        this.printRoute route
 
-      @printCallback "No idea how to process the request"
-      this.dispatchNoRoutes request, response
-      null
+        shouldStop = this.tryDispatchInRoute(request, response, route)
+        if shouldStop
+          return null
+
+    @printCallback "No idea how to process the request!"
+    this.dispatchNoRoutes request, response
+    null
 
 # eslint no-unused-expressions: "allow"
 exports.MockableHttpServer = MockableHttpServer

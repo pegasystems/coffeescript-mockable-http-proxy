@@ -23,14 +23,19 @@ mockableHttpServer = require "../logic"
 describe "MockableHttpServer", () ->
     tested =  null
     setIntervalCallback = null
+    setTimeoutCallback = null
     promiseClass = null
 
     beforeEach () ->
         printCallback = jasmine.createSpy("printCallback")
         setIntervalCallback = jasmine.createSpy("setIntervalCallback")
+        setTimeoutCallback = jasmine.createSpy("setTimeoutCallback")
         promiseClass = jasmine.createSpy("promiseClass")
 
-        tested = new mockableHttpServer.MockableHttpServer(printCallback, setIntervalCallback, promiseClass)
+        tested = new mockableHttpServer.MockableHttpServer(printCallback,
+            setIntervalCallback, setTimeoutCallback, promiseClass)
+        #printCallback.and.callFake (x) ->
+        #    console.info x
         null
 
     it "should be defined", () ->
@@ -131,7 +136,6 @@ describe "MockableHttpServer", () ->
                 expect(tested.methodRoutesGet()).toEqual expected
                 expect(tested.methodRouteGet(addedId)).toEqual changedEntry
 
-
         it "prints routes every 60 seconds - ANY routes", () ->
             tested.methodRoutesPost(addedEntry)
 
@@ -178,6 +182,14 @@ describe "MockableHttpServer", () ->
             it "forward: no port", () ->
                 anEntry = {method: "POST", path: "aaa", priority: 1, forward: {host: "localhost"}}
                 expect(() -> tested.methodRoutesPost(anEntry)).toThrow new Error("Invalid route data: forward must have host and port")
+
+            it "delay: no forward", () ->
+                anEntry = {method: "POST", path: "aaa", priority: 1, delay: 1}
+                expect(() -> tested.methodRoutesPost(anEntry)).toThrow new Error("Invalid route data: delay requires forward")
+
+            it "delay: conflicts with log", () ->
+                anEntry = {method: "POST", path: "aaa", priority: 1, forward: {}, delay: 1, log: {}}
+                expect(() -> tested.methodRoutesPost(anEntry)).toThrow new Error("Invalid route data: delay conflicts with log")
 
         describe "many routes", () ->
             expected = undefined
@@ -254,6 +266,16 @@ describe "MockableHttpServer", () ->
             },
             priority: 1099
         }
+        forwardDelayEntry = {
+            path: "^forward/delay$",
+            method: "GET",
+            forward: {
+                host: "example.ru"
+                port: 1
+            },
+            priority: 1099,
+            delay: 1
+        }
         logEntry = {
             path: "^log$",
             method: "GET",
@@ -267,6 +289,7 @@ describe "MockableHttpServer", () ->
             tested.methodRoutesPost(responsePostEntry)
             tested.methodRoutesPost(responseTimesEntry)
             tested.methodRoutesPost(forwardEntry)
+            tested.methodRoutesPost(forwardDelayEntry)
             tested.methodRoutesPost(logEntry)
 
             request = jasmine.createSpyObj("request", ["anything", "on"])
@@ -305,6 +328,17 @@ describe "MockableHttpServer", () ->
             tested.dispatch(request, response, proxy)
             expect(mockProxyServer.web).toHaveBeenCalledWith(request, response, {target: "http://#{forwardEntry.forward.host}:#{forwardEntry.forward.port}"})
 
+        it "proxies for forward route with delay", (done) ->
+            request.url = "/forward/delay"
+            setTimeoutCallback.and.callFake (cbk, time) ->
+                expect(time).toEqual(forwardDelayEntry.delay * 1000)
+                cbk()
+
+                expect(mockProxyServer.web).toHaveBeenCalledWith(request, response, {target: "http://#{forwardEntry.forward.host}:#{forwardEntry.forward.port}"})
+                done()
+
+            tested.dispatch(request, response, proxy)
+
         it "decrements times", () ->
             request.url = "/response/times"
 
@@ -313,14 +347,14 @@ describe "MockableHttpServer", () ->
             expect(response.statusCode).toEqual responseTimesEntry.response.code
             expect(response.write).toHaveBeenCalledWith(responseTimesEntry.response.body)
             expect(response.end).toHaveBeenCalledWith
-            expect(Object.keys(tested.methodRoutesGet()).length).toEqual(5)
+            expect(Object.keys(tested.methodRoutesGet()).length).toEqual(6)
 
             # 1 -> 0
             tested.dispatch(request, response, proxy)
             expect(response.statusCode).toEqual responseTimesEntry.response.code
             expect(response.write).toHaveBeenCalledWith(responseTimesEntry.response.body)
             expect(response.end).toHaveBeenCalledWith
-            expect(Object.keys(tested.methodRoutesGet()).length).toEqual(4)
+            expect(Object.keys(tested.methodRoutesGet()).length).toEqual(5)
 
             # Already deleted
             tested.dispatch(request, response, proxy)
@@ -328,7 +362,7 @@ describe "MockableHttpServer", () ->
             expect(response.statusMessage).toEqual "Not found"
             expect(response.write).toHaveBeenCalledWith("Not found")
             expect(response.end).toHaveBeenCalledWith
-            expect(Object.keys(tested.methodRoutesGet()).length).toEqual(4)
+            expect(Object.keys(tested.methodRoutesGet()).length).toEqual(5)
 
     describe "logged requests", () ->
         beforeEach () ->
@@ -352,7 +386,7 @@ describe "MockableHttpServer", () ->
             expect(reject).toHaveBeenCalledWith "Did not get logs of anything after timeout of 0"
             expect(resolve).not.toHaveBeenCalled()
 
-        it "not found later", () ->
+        it "not found - custom timeout", () ->
             promiseObj = jasmine.createSpy("promiseObj")
             resolve = jasmine.createSpy("resolve")
             reject = jasmine.createSpy("reject")
@@ -374,8 +408,119 @@ describe "MockableHttpServer", () ->
             expect(reject).toHaveBeenCalledWith "Did not get logs of anything after timeout of 0.2"
             expect(resolve).not.toHaveBeenCalled()
 
-        it "found immediatelly", () ->
-            pending()
+        it "not found - default timeout", () ->
+            promiseObj = jasmine.createSpy("promiseObj")
+            resolve = jasmine.createSpy("resolve")
+            reject = jasmine.createSpy("reject")
+            promiseClass.and.returnValue promiseObj
 
-        it "found later", () ->
-            pending()
+            ret = tested.methodLogGet("anything")
+            expect(ret).toBe(promiseObj)
+
+            call = promiseClass.calls.first().args[0]
+            call(resolve, reject)
+            expect(setIntervalCallback.calls.first().args[1]).toEqual 100
+            callback = setIntervalCallback.calls.first().args[0]
+
+            callback() for [0..601]
+            expect(reject).toHaveBeenCalledWith "Did not get logs of anything after timeout of 60"
+            expect(resolve).not.toHaveBeenCalled()
+
+        describe "found", () ->
+            request = null
+            response = null
+            proxy = null
+            route = null
+            expectedLog = null
+
+            entry = {
+                path: "^response$",
+                method: "GET",
+                response: {
+                    code: 200,
+                    body: "ROWER"
+                },
+                priority: 99,
+                log: true
+            }
+
+            doRequest = () ->
+                request.on.calls.reset()
+
+                tested.dispatch(request, response, proxy)
+                expect(response.statusCode).toEqual 200
+
+                calls = request.on.calls.allArgs()
+                expect(calls.length).toBe(2)
+                expect(calls[0][0]).toEqual("data")
+                expect(calls[1][0]).toEqual("end")
+
+                onDataCallback = calls[0][1]
+                onEndCallback = calls[1][1]
+
+                onDataCallback("body")
+                onEndCallback()
+
+            beforeEach () ->
+                tested.methodRoutesDelete()
+                tested.methodRoutesPost(entry)
+
+                request = jasmine.createSpyObj("request", ["anything", "on"])
+                request.url = "/response"
+                request.method = "GET"
+                request.headers = {"Content-Type": "application/json"}
+                response = jasmine.createSpyObj("response", ["end", "write"])
+                proxy = jasmine.createSpyObj("proxy", ["web"])
+                proxy.web.and.throwError "Should not be run"
+
+                expectedLog = {
+                    headers: request.headers,
+                    method: request.method,
+                    url: request.url,
+                    body: "body"
+                }
+
+                tested.methodRoutesDelete()
+                route = tested.methodRoutesPost(entry)
+                null
+
+            it "immediatelly", () ->
+                doRequest()
+
+                ret = tested.methodLogGet(route, 0)
+                expect(ret.length).toBe(1)
+                expect(ret[0]).toEqual(expectedLog)
+
+                ret = tested.methodLogsGet()
+                expect(ret.length).toBe(0)
+
+            it "immediatelly - many", () ->
+                doRequest()
+                doRequest()
+                doRequest()
+
+                ret = tested.methodLogGet(route, 0)
+                expect(ret.length).toBe(3)
+
+            it "later", () ->
+                promiseObj = jasmine.createSpy("promiseObj")
+                resolve = jasmine.createSpy("resolve")
+                reject = jasmine.createSpy("reject")
+                promiseClass.and.returnValue promiseObj
+
+                ret = tested.methodLogGet(route, 0.2)
+                expect(ret).toBe(promiseObj)
+
+                call = promiseClass.calls.first().args[0]
+                call(resolve, reject)
+                expect(setIntervalCallback.calls.first().args[1]).toEqual 100
+                callback = setIntervalCallback.calls.first().args[0]
+
+                doRequest()
+
+                callback()
+                expect(reject).not.toHaveBeenCalled()
+                expect(resolve).not.toHaveBeenCalledWith(expectedLog)
+
+                ret = tested.methodLogsGet()
+                expect(ret.length).toBe(0)
