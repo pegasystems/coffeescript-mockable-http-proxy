@@ -19,50 +19,50 @@ codecov = require "gulp-codecov"
 require "coffee-script/register"
 
 gulp.task "test", () ->
-    gulp.src(["logic.coffee", "main.coffee"])
-        .pipe(istanbul())
-        .pipe(istanbul.hookRequire())
-        .on("finish", () ->
-            gulp.src(["spec/*.coffee"])
-                .pipe(jasmine(
-                    verbose: true
-                ))
-                .pipe(istanbul.writeReports(
-                    reporters: ["text", "text-summary", "html"]
-                ))
-        )
+  gulp.src(["logic.coffee", "main.coffee"])
+    .pipe(istanbul())
+    .pipe(istanbul.hookRequire())
+    .on("finish", () ->
+      gulp.src(["spec/*.coffee"])
+        .pipe(jasmine(
+          verbose: true
+        ))
+        .pipe(istanbul.writeReports(
+          reporters: ["text", "text-summary", "html"]
+        ))
+    )
 
 gulp.task "lint", () ->
-    opts =
-        globals: [
-            "beforeEach",
-            "console",
-            "clearInterval"
-            "del",
-            "describe",
-            "expect",
-            "exports",
-            "global",
-            "it",
-            "jasmine",
-            "Objects",
-            "pending",
-            "require",
-            "setInterval"
-        ]
-        rules:
-            "strict": "off",
-            "global-strict": "off",
-            "no-console": "allow"
-            "no-return-assignment": "allow"
-            "no-shadow": "allow"
-            "no-undef": "allow"
-            "no-unused-expressions": "allow"
+  opts =
+    globals: [
+        "beforeEach",
+        "console",
+        "clearInterval"
+        "del",
+        "describe",
+        "expect",
+        "exports",
+        "global",
+        "it",
+        "jasmine",
+        "Objects",
+        "pending",
+        "require",
+        "setInterval"
+    ]
+    rules:
+      "strict": "off",
+      "global-strict": "off",
+      "no-console": "allow"
+      "no-return-assignment": "allow"
+      "no-shadow": "allow"
+      "no-undef": "allow"
+      "no-unused-expressions": "allow"
 
-    gulp.src(["*.coffee", "spec/*.coffee"])
-        .pipe(cslint(opts))
-        .pipe(cslint.format())
-        .pipe(cslint.failOnError())
-        .pipe(codecov())
+  gulp.src(["*.coffee", "spec/*.coffee"])
+    .pipe(cslint(opts))
+    .pipe(cslint.format())
+    .pipe(cslint.failOnError())
+    .pipe(codecov())
 
 gulp.task "default", ["test", "lint"]
