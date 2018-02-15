@@ -26,6 +26,7 @@ class MockableHttpServer
                 setIntervalCallback=global.setInterval,
                 setTimeoutCallback=global.setTimeout,
                 promiseClassCallback=Promise) ->
+
     @proxy = httpProxy.createProxyServer {}
     @routes = {}
     @loggedRequests = {}
