@@ -6,7 +6,7 @@ node_js:
   - "6"
   - "5"
 before_script:
-  - sudo apt-get install -y wget jq diff
+  - sudo apt-get install -y wget jq diffutils
   - npm install -g gulp ci-publish gulp-codecov http-server
   - npm install
 script:
