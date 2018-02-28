@@ -12,10 +12,10 @@ npm install -g http-server || exit 1
 
 # 0. Start servers
 
-pkill -fi main.coffee
-pkill -fi http-server
+pkill -f main.coffee
+pkill -f http-server
 
-coffee ../main.coffee &
+../node_modules/.bin/coffee ../main.coffee &
 wget -q -O - --retry-connrefused http://localhost:31338/ || exit 1
 
 http-server -p 31339 &
@@ -67,9 +67,9 @@ wget -O - http://127.0.0.1:31338/logs > post || exit 1
 echo -n '[]' > pre
 diff -u pre post || exit 1
 
-pkill -fi main.coffee
-pkill -fi http-server
+pkill -f main.coffee
+pkill -f http-server
 sleep 3
 
-pkill -9 -fi main.coffee
-pkill -9 -fi http-server
+pkill -9 -f main.coffee
+pkill -9 -f http-server
