@@ -18,7 +18,9 @@
   "dependencies": {
     "access-log": "^0.3.9",
     "array-sort": "^0.x",
+    "base-64": "^0.1.0",
     "coffee": "^3.x",
+    "coffee-register": "^2.2.0",
     "command-line-args": "^3.x",
     "http-promises": "^1.x",
     "http-proxy": "^1.x",

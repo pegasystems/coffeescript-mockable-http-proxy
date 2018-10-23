@@ -13,10 +13,11 @@
 DEFAULT_TIMEOUT = 60
 TICK = 100
 
+arraySort = require "array-sort"
+buffer = require('buffer').Buffer
+httpProxy = require "http-proxy"
 restService = require "rest-middleware/server"
 uuid = require "uuid"
-arraySort = require "array-sort"
-httpProxy = require "http-proxy"
 
 clone = (obj) ->
   JSON.parse(JSON.stringify(obj))
@@ -138,6 +139,9 @@ class MockableHttpServer
 
     if data.log?
       @printCallback "Action is to log all requests"
+
+      if data.log.base64?
+        @printCallback "  body will be base64-ed"
 
   findMatchingRoutes: (opts) ->
     this.sortRoutesIfNeeded()
@@ -282,16 +286,23 @@ class MockableHttpServer
 
   tryDispatchInRoute: (request, response, route) ->
     uthis = this
+
     if route.log?
-      buffer = ""
+      buffers = []
 
       request.on "data", (data) ->
-        buffer += data
+        buffers.push data
         uthis.printCallback "Request more data #{data.length}"
         null
 
       request.on "end", () ->
         uthis.printCallback "Request end"
+
+        encoding = 'utf8'
+        if route.log.base64?
+          encoding = 'base64'
+        buffer = Buffer.concat(buffers).toString(encoding)
+
         log = {headers: request.headers, method: request.method, \
                url: request.url, body: buffer}
         uthis.addLoggedRequestForRoute route.key, log

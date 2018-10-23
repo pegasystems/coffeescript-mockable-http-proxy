@@ -16,7 +16,7 @@ istanbul = require "gulp-coffee-istanbul"
 cslint = require "gulp-cslint"
 codecov = require "gulp-codecov"
 
-require "coffee-script/register"
+require "coffee-register"
 
 gulp.task "test", () ->
   gulp.src(["logic.coffee", "main.coffee"])
