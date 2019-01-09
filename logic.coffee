@@ -13,8 +13,8 @@
 DEFAULT_TIMEOUT = 60
 TICK = 100
 
-arraySort = require "array-sort"
-buffer = require('buffer').Buffer
+arraySort = require 'array-sort'
+buffer = (require 'buffer').Buffer
 httpProxy = require "http-proxy"
 restService = require "rest-middleware/server"
 uuid = require "uuid"
@@ -23,14 +23,20 @@ clone = (obj) ->
   JSON.parse(JSON.stringify(obj))
 
 class MockableHttpServer
-  constructor: (printCallback=console.log, \
+  constructor: (printCallback=console.log,
                 setIntervalCallback=global.setInterval,
                 setTimeoutCallback=global.setTimeout,
                 promiseClassCallback=Promise) ->
-
-    @proxy = httpProxy.createProxyServer {
-      proxyTimeout: 5 * 60 * 1000
+    opts = {
+      proxyTimeout: 5 * 60 * 1000,
+      secure: false,
+      autoRewrite: true,
+      protocolRewrite: 'http',
+      forceRewrite: true
     }
+
+    @proxy = httpProxy.createProxyServer opts
+
     @routes = {}
     @loggedRequests = {}
     @internalDataForRoutes = {}
@@ -53,6 +59,11 @@ class MockableHttpServer
         uthis.printRoute uthis.routes[key]
 
       uthis.printCallback ""
+
+    @proxy.on 'error', (err, req, res) ->
+      uthis.printCallback "Error: #{err}"
+      res.statusCode = 502
+      res.end()
 
     @setIntervalCallback printRoutes, 60000
 
@@ -111,9 +122,9 @@ class MockableHttpServer
           throw new restService.ServerMethodError 400, "POST", [],
             "Invalid route data: response must have code and body"
       if data.forward?
-        if !data.forward.host? or !data.forward.port?
+        if !data.forward.host? or !data.forward.port? or !data.forward.ssl?
           throw new restService.ServerMethodError 400, "POST", [],
-            "Invalid route data: forward must have host and port"
+            "Invalid route data: forward must have host, port and ssl"
     else
       throw new restService.ServerMethodError 400, "POST", [],
         "Invalid route data: no action provided"
@@ -134,8 +145,11 @@ class MockableHttpServer
       @printCallback "  with body: #{data.response.body}"
 
     if data.forward?
+      protocol = "http"
+      if data.forward.ssl
+        protocol = "https"
       @printCallback "Action is to forward all requests to " +
-                     "#{data.forward.host}:#{data.forward.port}"
+                     "#{protocol}://#{data.forward.host}:#{data.forward.port}"
       if data.delay?
         @printCallback "  and delay HTTP request by #{data.delay} seconds"
 
@@ -328,17 +342,26 @@ class MockableHttpServer
       return true
 
     if route.forward?
-      target = "http://#{route.forward.host}:#{route.forward.port}"
+      protocol = "http"
+      if route.forward.ssl
+        protocol = "https"
+
+      target = "#{protocol}://#{route.forward.host}:#{route.forward.port}"
+      options = {
+        target: target,
+        secure: false,
+        ssl: {}
+      }
 
       if route.delay?
         @printCallback "Delaying by #{route.delay} seconds"
 
         cbk = () ->
-          uthis.proxy.web request, response, {target: target}
+          uthis.proxy.web request, response, options
 
         @setTimeoutCallback cbk, (route.delay) * 1000
       else
-        @proxy.web request, response, {target: target}
+        @proxy.web request, response, options
 
       return true
 

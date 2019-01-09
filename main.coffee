@@ -10,30 +10,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-MockableHttpServer = require("./logic").MockableHttpServer
-restService = require "rest-middleware/server"
-http = require "http"
-commandLineArgs = require "command-line-args"
 accesslog = require "access-log"
+commandLineArgs = require "command-line-args"
+fs = require 'fs'
+http = require 'http'
+https = require 'https'
+restService = require "rest-middleware/server"
+
+MockableHttpServer = require("./logic").MockableHttpServer
 
 options = [
     { name: "port", alias: "p", type: Number, defaultValue: 31337 },
     { name: "host", alias: "h", type: String, defaultValue: "0.0.0.0" },
     { name: "api-port", type: Number, defaultValue: 31338 },
-    { name: "timeout", alias: "t", type: Number, defaultvalue: 300 }
+    { name: "timeout", alias: "t", type: Number, defaultValue: 300 },
+    { name: "ssl-key", alias: "k", type: String, defaultValue: null },
+    { name: "ssl-cert", alias: "c", type: String, defaultValue: null },
 ]
 
-args = commandLineArgs options
 mockableHttpServer = new MockableHttpServer()
 
 publicServerRequestListener = (request, response) ->
   accesslog(request, response)
   mockableHttpServer.dispatch(request, response)
 
+args = commandLineArgs options
 console.log "Starting public server at #{args.host}:#{args.port}"
-publicServer = http.createServer publicServerRequestListener
+if args['ssl-key'] and args['ssl-cert']
+  opts = {
+    key: fs.readFileSync(args['ssl-key'], 'utf8'),
+    cert: fs.readFileSync(args['ssl-cert'], 'utf8'),
+  }
+  publicServer = https.createServer opts, publicServerRequestListener
+else
+  publicServer = http.createServer publicServerRequestListener
 publicServer.listen args.port, args.host
-console.info args
+
 if args.timeout > 0
   publicServer.timeout = args.timeout * 1000
 

@@ -23,7 +23,7 @@
     "coffee-register": "^2.2.0",
     "command-line-args": "^3.x",
     "http-promises": "^1.x",
-    "http-proxy": "^1.x",
+    "http-proxy": "tsieprawskipega/node-http-proxy#rewrite-303-force",
     "istanbul": "^0.4.x",
     "jasmine-node": "^1.x",
     "mock-require": "^1.x",
