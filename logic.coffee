@@ -31,7 +31,6 @@ class MockableHttpServer
       proxyTimeout: 5 * 60 * 1000,
       secure: false,
       autoRewrite: true,
-      protocolRewrite: 'http',
       forceRewrite: true
     }
 
@@ -300,7 +299,7 @@ class MockableHttpServer
     response.write "Not found"
     response.end()
 
-  tryDispatchInRoute: (request, response, route) ->
+  dispatchInRoute: (request, response, route) ->
     uthis = this
 
     if route.log?
@@ -339,9 +338,7 @@ class MockableHttpServer
       response.statusCode = route.response.code
       response.write route.response.body
       response.end()
-      return true
-
-    if route.forward?
+    else if route.forward?
       protocol = "http"
       if route.forward.ssl
         protocol = "https"
@@ -349,23 +346,20 @@ class MockableHttpServer
       target = "#{protocol}://#{route.forward.host}:#{route.forward.port}"
       options = {
         target: target,
-        secure: false,
-        ssl: {}
+        secure: false
       }
+      @printCallback target
+
+      proxyNow = () ->
+        uthis.printCallback "Forwarding to #{target}"
+        uthis.proxy.web request, response, options
 
       if route.delay?
         @printCallback "Delaying by #{route.delay} seconds"
 
-        cbk = () ->
-          uthis.proxy.web request, response, options
-
-        @setTimeoutCallback cbk, (route.delay) * 1000
+        @setTimeoutCallback proxyNow, (route.delay) * 1000
       else
-        @proxy.web request, response, options
-
-      return true
-
-    return false
+        proxyNow()
 
   dispatch: (request, response) ->
     path = request.url.substring(1)
@@ -374,14 +368,11 @@ class MockableHttpServer
     matchedRoutes = this.findMatchingRoutes {path: path, \
                                              method: request.method}
     if matchedRoutes.length > 0
-      @printCallback "Matched #{matchedRoutes.length} routes"
+      @printCallback "Matched #{matchedRoutes.length} routes, will dispatch in first one"
       for route in matchedRoutes
         @printCallback "In route #{route.key}"
         this.printRoute route
-
-        shouldStop = this.tryDispatchInRoute(request, response, route)
-        if shouldStop
-          return null
+        return this.dispatchInRoute(request, response, route)
 
     @printCallback "No idea how to process the request!"
     this.dispatchNoRoutes request, response
