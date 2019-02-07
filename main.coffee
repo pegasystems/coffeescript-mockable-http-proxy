@@ -12,9 +12,9 @@
 
 accesslog = require "access-log"
 commandLineArgs = require "command-line-args"
-fs = require 'fs'
-http = require 'http'
-https = require 'https'
+fs = require "fs"
+http = require "http"
+https = require "https"
 restService = require "rest-middleware/server"
 
 MockableHttpServer = require("./logic").MockableHttpServer
@@ -36,10 +36,10 @@ publicServerRequestListener = (request, response) ->
 
 args = commandLineArgs options
 console.log "Starting public server at #{args.host}:#{args.port}"
-if args['ssl-key'] and args['ssl-cert']
+if args["ssl-key"] and args["ssl-cert"]
   opts = {
-    key: fs.readFileSync(args['ssl-key'], 'utf8'),
-    cert: fs.readFileSync(args['ssl-cert'], 'utf8'),
+    key: fs.readFileSync(args["ssl-key"], "utf8"),
+    cert: fs.readFileSync(args["ssl-cert"], "utf8"),
   }
   publicServer = https.createServer opts, publicServerRequestListener
 else
@@ -60,7 +60,7 @@ apiServer.methods {
 
     POST creates a new route, and returns new route ID.
 
-    Route's content:
+    Route"s content:
     * path: string
       REQUIRED. Regexp of URL to match.
     * times: uint
@@ -93,22 +93,22 @@ apiServer.methods {
     Example request body:
       ```
       {
-          path: '^ajax$',
+          path: "^ajax$",
           times: 1,
           priority: 99,
           log: true,
-          method: 'POST'
+          method: "POST"
           response:
           {
               code: 500,
-              body: 'Internal server error'
+              body: "Internal server error"
           }
       }
       ```
 
     DELETE removes all routes.
 
-    @param {object} data: Route's content.
+    @param {object} data: Route"s content.
     """,
     url: "/routes",
 
@@ -125,14 +125,14 @@ apiServer.methods {
     docs: """
     Manages a specific route.
 
-    * GET returns the route's content.
+    * GET returns the route"s content.
 
-    POST replaces route's content with given one.
+    POST replaces route"s content with given one.
 
     DELETE removes the route.
 
-    @param {string} id: Route's ID.
-    @param {object} data: Route's content.
+    @param {string} id: Route"s ID.
+    @param {object} data: Route"s content.
     """,
     url: "/route/:id",
 
@@ -178,7 +178,7 @@ apiServer.methods {
     404 error.
 
     This call is destructive - after a successful GET, the answers are removed
-    from the cache, and they won't appear in next requests.
+    from the cache, and they won"t appear in next requests.
 
     Returns array of objects:
     * headers: object
@@ -202,7 +202,7 @@ apiServer.methods {
     ]
     ```
 
-    @param {string} id: Route's ID.
+    @param {string} id: Route"s ID.
     @param {int} timeout: Timeout to wait for requests, in seconds.
     If not given, defaults to 60 seconds.
     """,

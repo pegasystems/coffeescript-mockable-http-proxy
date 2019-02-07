@@ -25,7 +25,8 @@ gulp.task "test", () ->
     .on("finish", () ->
       gulp.src(["spec/*.coffee"])
         .pipe(jasmine(
-          verbose: true
+          verbose: true,
+          includeStackTrace: true
         ))
         .pipe(istanbul.writeReports(
           reporters: ["text", "text-summary", "html"]

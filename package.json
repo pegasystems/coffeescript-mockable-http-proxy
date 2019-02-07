@@ -24,6 +24,7 @@
     "command-line-args": "^3.x",
     "http-promises": "^1.x",
     "http-proxy": "tsieprawskipega/node-http-proxy#rewrite-303-force",
+    "http-server": "^0.11.1",
     "istanbul": "^0.4.x",
     "jasmine-node": "^1.x",
     "mock-require": "^1.x",

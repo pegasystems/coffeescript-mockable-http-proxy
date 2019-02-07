@@ -13,8 +13,8 @@
 DEFAULT_TIMEOUT = 60
 TICK = 100
 
-arraySort = require 'array-sort'
-buffer = (require 'buffer').Buffer
+arraySort = require "array-sort"
+buffer = (require "buffer").Buffer
 httpProxy = require "http-proxy"
 restService = require "rest-middleware/server"
 uuid = require "uuid"
@@ -29,7 +29,6 @@ class MockableHttpServer
                 promiseClassCallback=Promise) ->
     opts = {
       proxyTimeout: 5 * 60 * 1000,
-      secure: false,
       autoRewrite: true,
       forceRewrite: true
     }
@@ -59,7 +58,7 @@ class MockableHttpServer
 
       uthis.printCallback ""
 
-    @proxy.on 'error', (err, req, res) ->
+    @proxy.on "error", (err, req, res) ->
       uthis.printCallback "Error: #{err}"
       res.statusCode = 502
       res.end()
@@ -313,9 +312,9 @@ class MockableHttpServer
       request.on "end", () ->
         uthis.printCallback "Request end"
 
-        encoding = 'utf8'
+        encoding = "utf8"
         if route.log.base64?
-          encoding = 'base64'
+          encoding = "base64"
         buffer = Buffer.concat(buffers).toString(encoding)
 
         log = {headers: request.headers, method: request.method, \
@@ -345,8 +344,7 @@ class MockableHttpServer
 
       target = "#{protocol}://#{route.forward.host}:#{route.forward.port}"
       options = {
-        target: target,
-        secure: false
+        target: target
       }
       @printCallback target
 

@@ -8,8 +8,6 @@ set -x
 
 # Dependencies
 
-npm install -g http-server || exit 1
-
 # 0. Start servers
 
 pkill -f main.coffee
@@ -18,13 +16,13 @@ pkill -f http-server
 ../node_modules/.bin/coffee ../main.coffee &
 wget -q -O /dev/null --retry-connrefused http://localhost:31338/ || exit 1
 
-http-server -p 31339 &
+../node_modules/.bin/http-server -p 31339 &
 wget -q -O /dev/null --retry-connrefused http://localhost:31339/ || exit 1
 
 # 1. Forward all requests
 
 cat << EOF > postdata.txt
-{"path":"","priority":10,"forward":{"host":"127.0.0.1","port":31339}}
+{"path":"","priority":10,"forward":{"host":"127.0.0.1","port":31339,"ssl":false}}
 EOF
 wget -q -O - http://127.0.0.1:31338/routes --header 'Content-Type: application/json' --post-file=postdata.txt | jq . || exit 1
 wget -q -O - http://127.0.0.1:31338/routes | jq . || exit 1
@@ -69,9 +67,7 @@ diff -u pre post || exit 1
 
 pkill -f main.coffee
 pkill -f http-server
-sleep 3
+sleep 1
 
 pkill -9 -f main.coffee
 pkill -9 -f http-server
-
-exit 0

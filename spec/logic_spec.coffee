@@ -11,7 +11,7 @@
 # limitations under the License.
 
 mockRequire = require "mock-require"
-mockProxyServer = jasmine.createSpyObj("proxy", ["web"])
+mockProxyServer = jasmine.createSpyObj("proxy", ["web", "on"])
 mockCreateProxyServer = jasmine.createSpy("http-proxy.mockCreateProxyServer").and.callFake (opts) ->
   opts = opts
   mockProxyServer
@@ -34,8 +34,6 @@ describe "MockableHttpServer", () ->
 
     tested = new mockableHttpServer.MockableHttpServer(printCallback,
       setIntervalCallback, setTimeoutCallback, promiseClass)
-    #printCallback.and.callFake (x) ->
-    #    console.info x
     null
 
   it "should be defined", () ->
@@ -187,15 +185,21 @@ describe "MockableHttpServer", () ->
 
       it "forward: no host", () ->
         anEntry = {method: "POST", path: "aaa", priority: 1, \
-          forward: {port: 8080}}
+          forward: {port: 8080, ssl: false}}
         expect(() -> tested.methodRoutesPost(anEntry)).toThrow new Error(
-          "Invalid route data: forward must have host and port")
+          "Invalid route data: forward must have host, port and ssl")
 
       it "forward: no port", () ->
         anEntry = {method: "POST", path: "aaa", priority: 1, \
-          forward: {host: "localhost"}}
+          forward: {host: "localhost", ssl: false}}
         expect(() -> tested.methodRoutesPost(anEntry)).toThrow new Error(
-          "Invalid route data: forward must have host and port")
+          "Invalid route data: forward must have host, port and ssl")
+
+      it "forward: no ssl", () ->
+        anEntry = {method: "POST", path: "aaa", priority: 1, \
+          forward: {host: "localhost", "port": 8080}}
+        expect(() -> tested.methodRoutesPost(anEntry)).toThrow new Error(
+          "Invalid route data: forward must have host, port and ssl")
 
       it "delay: no forward", () ->
         anEntry = {method: "POST", path: "aaa", priority: 1, delay: 1}
@@ -279,7 +283,8 @@ describe "MockableHttpServer", () ->
       method: "GET",
       forward: {
         host: "example.ru"
-        port: 1
+        port: 1,
+        ssl: false,
       },
       priority: 1099
     }
@@ -288,7 +293,8 @@ describe "MockableHttpServer", () ->
       method: "GET",
       forward: {
         host: "example.ru"
-        port: 1
+        port: 1,
+        ssl: false,
       },
       priority: 1099,
       delay: 1
@@ -334,11 +340,6 @@ describe "MockableHttpServer", () ->
       expect(response.statusCode).toEqual responseEntry.response.code
       expect(response.write).toHaveBeenCalledWith(responseEntry.response.body)
       expect(response.end).toHaveBeenCalledWith
-
-    it "404 for log route", () ->
-      request.url = "/log"
-      tested.dispatch(request, response, proxy)
-      expect(response.statusCode).toEqual 404
 
     it "proxies for forward route", () ->
       request.url = "/forward"
@@ -486,7 +487,7 @@ describe "MockableHttpServer", () ->
         onDataCallback = calls[0][1]
         onEndCallback = calls[1][1]
 
-        onDataCallback("body")
+        onDataCallback(new Buffer("body"))
         onEndCallback()
 
       beforeEach () ->
