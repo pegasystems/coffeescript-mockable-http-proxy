@@ -71,3 +71,5 @@ sleep 1
 
 pkill -9 -f main.coffee
 pkill -9 -f http-server
+
+exit 0
