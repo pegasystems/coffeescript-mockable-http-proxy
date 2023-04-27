@@ -32,7 +32,7 @@ jobs:
 # The Unified Agent scan should be called AFTER a package manager build step such as "mvn clean install -DskipTests=true" or "npm install --only=prod"
     - name: Mend Unified Agent Scan
       env:
-        WS_PRODUCTNAME: $MEND_PRODUCT_NAME
+        WS_PRODUCTNAME: github_repos
         WS_PROJECTNAME: ${{github.event.repository.name}}_${{github.ref_name}}
         WS_GENERATEPROJECTDETAILSJSON: true
       run: |
